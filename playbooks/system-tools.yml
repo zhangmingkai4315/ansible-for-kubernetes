@@ -1,0 +1,40 @@
+---
+
+- hosts: all
+  become_user: root
+  gather_facts: no
+  tasks:
+    # - name: set timezone to Asia/Shanghai
+    #   timezone:
+    #     name: Asia/Shanghai
+    
+    # - name: upgrade all packages
+    #   yum: name=* state=latest
+    
+    - name: install basic tools
+      yum: 
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - ntp
+          - wget
+          - python
+          - net-tools
+          - python-pip
+
+    - name: start ntpd service 
+      systemd:
+        name: ntpd
+        state: started
+        enabled: true
+        
+    - name: set selinux to disable
+      selinux:
+        state: disabled
+
+    - name: ensure net.bridge.bridge-nf-call-ip6tables is set to 1
+      sysctl:
+        name: net.bridge.bridge-nf-call-ip6tables
+        value: 1
+        state: present

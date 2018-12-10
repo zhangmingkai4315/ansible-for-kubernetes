@@ -1,0 +1,16 @@
+
+KUBE_LOGTOSTDERR="--logtostderr=false"
+KUBE_LOG_DIR="--log-dir=/var/log/kubernetes"
+KUBE_LOG_LEVEL="--v=2"
+
+KUBELET_ADDRESS="--address=0.0.0.0"
+
+KUBELET_PORT="--port=10250"
+
+KUBE_ALLOW_PRIV="--allow-privileged=false"
+
+KUBELET_HOSTNAME="--hostname-override={{ inventory_hostname }}"
+
+KUBELET_KUBECONFIG="--kubeconfig=/etc/kubernetes/kubelet.kubeconfig"
+
+KUBELET_ARGS="--fail-swap-on=false"

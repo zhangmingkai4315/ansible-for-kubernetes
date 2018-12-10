@@ -5,6 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
+*.retry
+*.tar.gz
+*.tgz
 
 # Distribution / packaging
 .Python

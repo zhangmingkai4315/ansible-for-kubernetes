@@ -1,0 +1,19 @@
+---
+
+- hosts: etcd-cluster
+  become_user: root
+  tasks:
+    - name: install etcd
+      package:
+        name: "etcd"
+        state: "present"
+    - name: add config file from template
+      template:
+        src: ../templates/etcd.conf.j2
+        dest: /etc/etcd/etcd.conf
+    - name: start etcd cluster
+      systemd:
+        name: etcd
+        enabled: yes 
+        state: started
+

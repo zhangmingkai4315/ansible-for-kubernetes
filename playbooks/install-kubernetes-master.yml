@@ -1,0 +1,98 @@
+---
+
+- hosts: master
+  become_user: root
+  gather_facts: no
+  tasks:
+    - name: check if the files already in remote server
+      stat:
+        path: /tmp/kubernetes-server
+      register: kubernetes_server_checker
+    
+    - name: create kubernetes-server folder 
+      file:
+        path: /tmp/kubernetes-server
+        state: directory
+      when: not kubernetes_server_checker.stat.exists
+
+    - name: copy server file to remote master only when not exist
+      unarchive:
+        src: ../files/kubernetes-server-linux-amd64.tar.gz
+        dest: /tmp/kubernetes-server
+      when: not kubernetes_server_checker.stat.exists
+
+    - name: copy server bin file to /usr/bin
+      copy:
+        remote_src: True
+        src: "{{ item.source }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        mode: 0755
+      with_items:
+        - source: /tmp/kubernetes-server/kubernetes/server/bin/kube-apiserver
+          dest: /usr/bin/kube-apiserver
+        - source: /tmp/kubernetes-server/kubernetes/server/bin/kube-scheduler
+          dest: /usr/bin/kube-scheduler
+        - source: /tmp/kubernetes-server/kubernetes/server/bin/kube-controller-manager
+          dest: /usr/bin/kube-controller-manager
+
+  
+    - name: create kubernetes log folder 
+      file:
+        path: /var/log/kubernetes
+        state: directory
+
+    - name: create kubernetes files folder in remote master
+      file: 
+        path: /etc/kubernetes
+        state: directory
+
+    - name: add api-server env file to remote master
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      with_items:
+        - src: ../templates/env-api-server.j2
+          dest: /etc/kubernetes/kubernetes-api-server
+        - src: ../templates/env-control-manager.j2
+          dest: /etc/kubernetes/kubernetes-control-manager
+        - src: ../templates/env-scheduler.j2
+          dest: /etc/kubernetes/kubernetes-scheduler    
+    - name: add systemd file in remote master
+      template: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      with_items:
+        - src: ../templates/kube-apiserver.service.j2
+          dest: /etc/systemd/system/kube-apiserver.service
+        - src: ../templates/kube-control-manager.service.j2
+          dest: /etc/systemd/system/kube-control-manager.service
+        - src: ../templates/kube-scheduler.service.j2
+          dest: /etc/systemd/system/kube-scheduler.service
+          
+    - name: just force systemd to reread configs (2.4 and above)
+      systemd: daemon_reload=yes
+    
+    - name: start api server in master
+      systemd: 
+        name: kube-apiserver
+        enabled: yes
+        state: restarted
+    - name: start control manager in master
+      systemd: 
+        name: kube-control-manager
+        enabled: yes
+        state: restarted
+
+    - name: create scheduler working folder in remote master
+      file: 
+        path: /var/lib/kubelet
+        state: directory
+    
+    - name: start kube scheduler in master
+      systemd: 
+        name: kube-scheduler
+        enabled: yes
+        state: restarted
+        
+    

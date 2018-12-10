@@ -1,0 +1,100 @@
+---
+
+- hosts: nodes
+  become_user: root
+  gather_facts: no
+  tasks:
+    - name: check if the files already in remote server
+      stat:
+        path: /tmp/kubernetes-server
+      register: kubernetes_server_checker
+    
+    - name: create kubernetes-server folder 
+      file:
+        path: /tmp/kubernetes-server
+        state: directory
+      when: not kubernetes_server_checker.stat.exists
+
+    - name: copy server file to remote node only when not exist
+      unarchive:
+        src: ../files/kubernetes-server-linux-amd64.tar.gz
+        dest: /tmp/kubernetes-server
+      when: not kubernetes_server_checker.stat.exists
+
+    - name: copy server bin file to /usr/bin
+      copy:
+        remote_src: True
+        src: "{{ item.source }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        mode: 0755
+      with_items:
+        - source: /tmp/kubernetes-server/kubernetes/server/bin/kube-proxy
+          dest: /usr/bin/kube-proxy
+        - source: /tmp/kubernetes-server/kubernetes/server/bin/kubelet
+          dest: /usr/bin/kubelet
+
+  
+    - name: create kubernetes log folder 
+      file:
+        path: /var/log/kubernetes
+        state: directory
+
+    - name: create kubernetes files folder in remote master
+      file: 
+        path: /etc/kubernetes
+        state: directory
+
+    - name: add env file to remote master
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      with_items:
+        - src: ../templates/env-kube-proxy.j2
+          dest: /etc/kubernetes/kubernetes-kube-proxy
+        - src: ../templates/env-kubelet.j2
+          dest: /etc/kubernetes/kubernetes-kubelet
+    - name: add systemd file in remote master
+      template: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      with_items:
+        - src: ../templates/kube-kubelet.service.j2
+          dest: /etc/systemd/system/kubelet.service
+        - src: ../templates/kube-proxy.service.j2
+          dest: /etc/systemd/system/kube-proxy.service
+
+    - name: create kubelet working folder in remote node
+      file: 
+        path: /var/lib/kubelet
+        state: directory
+
+    - name: create kubelet config folder in remote node
+      file: 
+        path: /etc/kubernetes/kubelet
+        state: directory
+
+    - name: copy kubelet config file to config folder
+      template: 
+        src: "../templates/kubelet.kubeconfig.j2"
+        dest: /etc/kubernetes/kubelet.kubeconfig
+      
+    - name: just force systemd to reread configs (2.4 and above)
+      systemd: daemon_reload=yes
+
+    - name: turn off swap in node
+      command: "swapoff -a"
+    
+
+    - name: start kubelet in node
+      systemd: 
+        name: kubelet
+        enabled: yes
+        state: restarted
+    - name: start kube-proxy in node
+      systemd: 
+        name: kube-proxy
+        enabled: yes
+        state: restarted
+        
+    

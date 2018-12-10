@@ -1,0 +1,28 @@
+[master]
+192.168.0.200
+
+[etcd-cluster]
+192.168.0.200 node_name=etcd-200
+192.168.0.201 node_name=etcd-201
+192.168.0.202 node_name=etcd-202
+
+[etcd-cluster:vars]
+cluster_nodes="etcd-200=http://192.168.0.200:2380,etcd-201=http://192.168.0.201:2380,etcd-202=http://192.168.0.202:2380"
+
+[nodes]
+192.168.0.201
+192.168.0.202
+192.168.0.203
+
+[cluster:children]
+master
+nodes
+
+[all:vars]
+
+etcd_servers="http://192.168.0.200:2379,http://192.168.0.201:2379,http://192.168.0.202:2379"
+api_servers="http://192.168.0.200:8080"
+
+ansible_user=root
+ansible_port=22
+ansible_become=root

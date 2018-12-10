@@ -1,0 +1,7 @@
+
+KUBE_LOGTOSTDERR="--logtostderr=false"
+KUBE_LOG_DIR="--log-dir=/var/log/kubernetes"
+KUBE_LOG_LEVEL="--v=2"
+
+# The address on the local server to listen to.
+KUBE_MASTER="--master=http://{{ inventory_hostname }}:8080"
